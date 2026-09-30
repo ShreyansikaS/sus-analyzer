@@ -2,8 +2,6 @@
 
 A tool for scoring System Usability Scale (SUS) surveys, which is a standard 10 question questionnaire used in usability research.
 
-Live demo: https://YOUR-USERNAME.github.io/sus-analyzer/
-
 ## Why I made this
 My research work is mostly about how people behave in experiments, and a lot of that is cleaning survey data and making sure the scoring is right. SUS has a scoring rule that is easy to get wrong because odd and even questions are scored in opposite directions. I built this to practice turning a research method into a tool that other people could use without a spreadsheet.
 
