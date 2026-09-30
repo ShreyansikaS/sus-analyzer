@@ -1,0 +1,56 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SUS Analyzer – usability survey scoring</title>
+<style>
+:root{--bg:#fbfaf8;--ink:#20242a;--mut:#5d6570;--line:#d9dce1;--acc:#0f6b5c;--bar:#0f6b5c}
+@media(prefers-color-scheme:dark){:root{--bg:#14181a;--ink:#e9eef0;--mut:#9fa9ae;--line:#2f373b;--acc:#62d1bd;--bar:#62d1bd}}
+*{box-sizing:border-box}body{margin:0;font:16px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+main{max-width:900px;margin:auto;padding:24px 16px}h1{margin:0 0 4px;font-size:1.6rem}.s{color:var(--mut);margin:0 0 20px}
+textarea{width:100%;min-height:150px;padding:10px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:6px;font:14px ui-monospace,monospace}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+button{height:44px;padding:0 16px;margin:8px 8px 8px 0;border-radius:6px;border:1px solid var(--acc);background:var(--acc);color:var(--bg);font:inherit;font-weight:600;cursor:pointer}
+button.alt{background:transparent;color:var(--acc)}
+#score{font-size:3rem;font-weight:700;margin:12px 0 0}table{width:100%;border-collapse:collapse;margin:12px 0}
+td,th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}.bar{height:14px;background:var(--bar);border-radius:3px}
+.err{color:#b3261e}@media(prefers-color-scheme:dark){.err{color:#f2b8b5}}
+</style></head><body><main>
+<h1>SUS Analyzer</h1>
+<p class="s">Paste System Usability Scale responses, one participant per row: ten numbers from 1 to 5, separated by commas.</p>
+<label for="in">Responses</label>
+<textarea id="in" spellcheck="false">4,2,4,1,5,2,4,2,4,1
+3,3,3,2,4,3,3,2,3,2
+5,1,5,1,5,1,5,1,5,1
+2,4,2,4,2,3,2,4,2,4
+4,2,5,2,4,1,4,2,5,2</textarea>
+<button id="run">Calculate</button><button class="alt" id="csv">Upload CSV</button><input type="file" id="file" accept=".csv,.txt" hidden>
+<p id="err" class="err" role="alert"></p>
+<div id="out" hidden aria-live="polite">
+ <p>Mean SUS score</p><p id="score"></p><p id="grade"></p>
+ <table><thead><tr><th>Participant</th><th>Score (0–100)</th><th>Distribution</th></tr></thead><tbody id="rows"></tbody></table>
+ <p id="stats"></p><button class="alt" id="dl">Download results CSV</button>
+</div>
+<p class="s">Scoring: odd items contribute (response − 1), even items contribute (5 − response); the sum is multiplied by 2.5. A score near 68 is the commonly cited average.</p>
+<script>
+const $=id=>document.getElementById(id);let results=[];
+const sus=r=>2.5*r.reduce((s,v,i)=>s+(i%2===0?v-1:5-v),0);
+function grade(m){return m>=80.3?'Grade A: excellent':m>=68?'Grade B–C: above average':m>=51?'Grade D: below average':'Grade F: poor usability'}
+function run(){
+ $('err').textContent='';const lines=$('in').value.split('\n').map(l=>l.trim()).filter(Boolean);
+ results=[];
+ for(let i=0;i<lines.length;i++){
+  const v=lines[i].split(/[,\s]+/).map(Number);
+  if(v.length!==10||v.some(n=>!Number.isInteger(n)||n<1||n>5)){$('err').textContent=`Row ${i+1}: enter exactly 10 whole numbers from 1 to 5.`;$('out').hidden=true;return}
+  results.push(sus(v));
+ }
+ if(!results.length){$('err').textContent='Add at least one row of responses.';$('out').hidden=true;return}
+ const n=results.length,m=results.reduce((a,b)=>a+b)/n,sd=Math.sqrt(results.reduce((a,b)=>a+(b-m)**2,0)/Math.max(n-1,1));
+ $('score').textContent=m.toFixed(1);$('grade').textContent=grade(m);
+ $('rows').innerHTML=results.map((s,i)=>`<tr><td>P${i+1}</td><td>${s.toFixed(1)}</td><td><div class="bar" style="width:${s}%" role="img" aria-label="${s.toFixed(0)} out of 100"></div></td></tr>`).join('');
+ $('stats').textContent=`n = ${n}, SD = ${sd.toFixed(1)}, min = ${Math.min(...results).toFixed(1)}, max = ${Math.max(...results).toFixed(1)}`+(n<5?'. Small sample: interpret with caution.':'');
+ $('out').hidden=false;
+}
+$('run').onclick=run;$('csv').onclick=()=>$('file').click();
+$('file').onchange=async e=>{const f=e.target.files[0];if(f){$('in').value=(await f.text()).replace(/^\D*\n/,m=>/\d/.test(m)?m:'');run()}};
+$('dl').onclick=()=>{const t='participant,sus_score\n'+results.map((s,i)=>`P${i+1},${s.toFixed(1)}`).join('\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/csv'}));a.download='sus-results.csv';a.click()};
+run();
+</script></main></body></html>
